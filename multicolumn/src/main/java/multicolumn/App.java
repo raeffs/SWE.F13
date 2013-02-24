@@ -21,6 +21,9 @@ public class App
         String inputData = readFileContent(filename);
         
         for (String paragraph : getParagraphs(inputData)) {
+            if (lines.size() != 0) {
+                lines.add("");
+            }
             String actualLine = "";
             for (String word : getWords(paragraph)) {
                 for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
@@ -33,7 +36,6 @@ public class App
                 }
             }
             lines.add(actualLine);
-            lines.add("");
         }
         
         ListIterator<String> iterator = lines.listIterator();
@@ -50,6 +52,8 @@ public class App
                 continue;
             }
             if (!iterator.hasNext()) {
+                System.out.println(line);
+                formatedLines.add(line);
                 break;
             }
             if (iterator.next().equals("")) {
