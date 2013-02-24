@@ -18,57 +18,22 @@ public class App
         LinkedList<String> lines = new LinkedList<String>();
         ArrayList<String> formatedLines = new ArrayList<String>();
         
-        StringBuffer data = new StringBuffer();
-        BufferedReader reader = new BufferedReader(new FileReader(filename));
+        String inputData = readFileContent(filename);
         
-        char[] buffer = new char[1024];
-        int bytesRead;
-        while ((bytesRead = reader.read(buffer)) != -1) {
-            String tempData = String.valueOf(buffer, 0, bytesRead);
-            data.append(tempData);
-        }
-        reader.close();
-        
-        String inputData = data.toString().trim();
-        System.out.println(inputData);
-        
-        String[] paragraphs = inputData.split("(\r\n){2}|\r{2}|\n{2}");
-        
-        for (String paragraph : paragraphs) {
-            
-            String[] words = paragraph.split("[ \t\r\n]+");
-            System.out.println(words.length);
-            
+        for (String paragraph : getParagraphs(inputData)) {
             String actualLine = "";
-            for (String word : words) {
-                
-                String[] parts;
-                if (word.length() > columnWidth) {
-                    parts = new String[] {
-                        word.substring(0, columnWidth - 1) + "-",
-                        word.substring(columnWidth - 1)
-                    };
-                } else {
-                    parts = new String[] { word };
-                }
-                
-                for (String part : parts) {
-                    if (actualLine.length() + 1 + part.length() <= columnWidth) {
-                        if (actualLine.length() != 0) {
-                            actualLine += " ";
-                        }
-                        actualLine += part;
+            for (String word : getWords(paragraph)) {
+                for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
+                    if (fitsIntoLine(actualLine, part, columnWidth)) {
+                        actualLine = appendToLine(actualLine, part);
                     } else {
                         lines.add(actualLine);
                         actualLine = part;
                     }
                 }
-                
             }
-            
             lines.add(actualLine);
             lines.add("");
-            
         }
         
         ListIterator<String> iterator = lines.listIterator();
@@ -144,5 +109,54 @@ public class App
             
         }
         
+    }
+    
+    private static String readFileContent(String filename) throws Exception {
+        StringBuilder stringBuilder = new StringBuilder();
+        char[] buffer = new char[1024];
+        int bytesRead;
+        
+        BufferedReader reader = new BufferedReader(new FileReader(filename));
+        try {
+            while ((bytesRead = reader.read(buffer)) != -1) {
+                String tempData = String.valueOf(buffer, 0, bytesRead);
+                stringBuilder.append(tempData);
+            }
+        } finally {
+            reader.close();
+        }
+        
+        return stringBuilder.toString().trim();
+    }
+    
+    private static String[] getParagraphs(String data) {
+        return data.split("(\r\n){2}|\r{2}|\n{2}");
+    }
+    
+    private static String[] getWords(String data) {
+        return data.split("[ \t\r\n]+");
+    }
+    
+    private static String[] getSplittedWordIfTooLong(String word, int maxWidth) {
+        if (word.length() > maxWidth) {
+            return new String[] {
+                word.substring(0, maxWidth - 1) + "-",
+                word.substring(maxWidth - 1)
+            };
+        } else {
+            return new String[] { word };
+        }
+    }
+    
+    private static boolean fitsIntoLine(String line, String word, int maxWidth) {
+        return (line.length() == 0 || line.length() + 1 + word.length() <= maxWidth);
+    }
+    
+    private static String appendToLine(String line, String word) {
+        if (line.length() != 0) {
+            line += " ";
+        }
+        line += word;
+        return line;
     }
 }
