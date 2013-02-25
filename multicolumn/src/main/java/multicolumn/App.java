@@ -11,10 +11,10 @@ public class App
     public static void main( String[] args ) throws Exception
     {
         // default values
-        String inputFilename = "sample-input-01.txt";
-        String outputFilename = "sample-output-01.txt";
+        String inputFilename = "sample-input-02.txt";
+        String outputFilename = "sample-output-02.txt";
         int columnCount = 4;
-        int columnWidth = 30;
+        int columnWidth = 33;
         
         // read commandline args
         if (args != null && args.length == 4) {
@@ -135,33 +135,24 @@ public class App
     }
     
     private void splitContentIntoLines(String content) {
-        int missingLines = 0;
-        do {
-            for (String paragraph : getParagraphs(content)) {
-                if (!lines.isEmpty()) {
-                    lines.add("");
-                }
-                String actualLine = "";
-                for (String word : getWords(paragraph)) {
-                    for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
-                        if (missingLines > 0 &&
-                                fitsIntoLine(actualLine, part, columnWidth) &&
-                                !fitsIntoLine(actualLine, part, columnWidth - 1)) {
-                            missingLines--;
-                            lines.add(actualLine);
-                            actualLine = part;
-                        } else if (fitsIntoLine(actualLine, part, columnWidth)) {
-                            actualLine = appendToLine(actualLine, part);
-                        } else {
-                            lines.add(actualLine);
-                            actualLine = part;
-                        }
+        lines.clear();
+        for (String paragraph : getParagraphs(content)) {
+            if (!lines.isEmpty()) {
+                lines.add("");
+            }
+            String actualLine = "";
+            for (String word : getWords(paragraph)) {
+                for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
+                    if (fitsIntoLine(actualLine, part, columnWidth)) {
+                        actualLine = appendToLine(actualLine, part);
+                    } else {
+                        lines.add(actualLine);
+                        actualLine = part;
                     }
                 }
-                lines.add(actualLine);
             }
-            missingLines = getMissingLinesToNearlyFillLastBlock();
-        } while (missingLines != 0);
+            lines.add(actualLine);
+        }
     }
     
     private int getMissingLinesToNearlyFillLastBlock() {
