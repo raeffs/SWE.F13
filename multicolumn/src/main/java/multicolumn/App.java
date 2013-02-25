@@ -1,27 +1,142 @@
 package multicolumn;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.ListIterator;
 
 public class App 
 {
     public static void main( String[] args ) throws Exception
     {
-        String filename = "sample-input-01.txt";
+        // default values
+        String inputFilename = "sample-input-01.txt";
+        String outputFilename = "sample-output-01.txt";
         int columnCount = 4;
         int columnWidth = 30;
-        int spaceBetweenColumns = 10;
         
-        LinkedList<String> lines = new LinkedList<String>();
-        ArrayList<String> formatedLines = new ArrayList<String>();
+        // read commandline args
+        if (args != null && args.length == 4) {
+            inputFilename = args[0];
+            outputFilename = args[1];
+            columnCount = Integer.parseInt(args[2]);
+            columnWidth = Integer.parseInt(args[3]);
+        }
         
-        String inputData = readFileContent(filename);
+        // do the work
+        String input = readFileContent(inputFilename);
+        String output = new App().processInput(input, columnCount, columnWidth);
+        writeContentToFile(outputFilename, output);
         
-        for (String paragraph : getParagraphs(inputData)) {
-            if (lines.size() != 0) {
+        if (args == null || args.length == 0) {
+            System.out.println(output);
+        }
+    }
+    
+    private static final int spaceBetweenColumns = 10;
+    
+    private int columnCount;
+    private int columnWidth;
+    
+    private ArrayList<String> lines = new ArrayList<String>();
+    
+    public String processInput(String input, int columnCount, int columnWidth) {
+        this.columnCount = columnCount;
+        this.columnWidth = columnWidth;
+        
+        splitContentIntoLines(input);
+        return constructOutput(getLinesPerColumn());
+    }
+    
+    private int getLinesPerColumn() {
+        return lines.size() / columnCount + 1;
+    }
+    
+    private String constructOutput(int linesPerColumn) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int rowIndex = 0; rowIndex < linesPerColumn; rowIndex++) {
+            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+                int effectiveColumnWidth = getEffectiveColumnWidth(columnIndex);
+                int lineIndex = rowIndex + columnIndex * linesPerColumn;
+                String formattedLine = getFormattedLine(lineIndex);
+                stringBuilder.append(String.format(
+                        "%-" + effectiveColumnWidth + "s",
+                        formattedLine));
+            }
+            stringBuilder.append(System.getProperty("line.separator"));
+        }
+        return stringBuilder.toString();
+    }
+    
+    private String getFormattedLine(int lineIndex) {
+        if (!lineExists(lineIndex)) {
+            return "";
+        }
+        String line = lines.get(lineIndex);
+        if (isNextLineEmpty(lineIndex)) {
+            return line;
+        }
+        if (!requiresFormatting(line)) {
+            return line;
+        }
+        return formatLine(line);
+    }
+    
+    private String formatLine(String line) {
+        String[] words = getWords(line);
+        int numberOfSpaces = words.length - 1;
+        int spaceWidth = getAdditionalSpace(line) / numberOfSpaces + 1;
+        int numberOfSpacesThatNeedToBeLonger = getAdditionalSpace(line) % numberOfSpaces;
+        
+        String formattedLine = "";
+        for (String word : words) {
+            formattedLine += word;
+            formattedLine += getSpaceToInsert(numberOfSpaces--, 
+                    numberOfSpacesThatNeedToBeLonger--, spaceWidth);
+        }
+        return formattedLine;
+    }
+    
+    private String getSpaceToInsert(int numberOfSpaces, 
+            int numberOfSpacesThatNeedToBeLonger, int spaceWidth) {
+        if (numberOfSpacesThatNeedToBeLonger > 0) {
+            return String.format("%" + (spaceWidth + 1) + "s", "");
+        } else if (numberOfSpaces > 0) {
+            return String.format("%" + spaceWidth + "s", "");
+        }
+        return "";
+    }
+    
+    private boolean requiresFormatting(String line) {
+        return getAdditionalSpace(line) > 0
+                && line.contains(" ");
+    }
+    
+    private int getAdditionalSpace(String line) {
+        return columnWidth - line.length();
+    }
+    
+    private boolean isNextLineEmpty(int lineIndex) {
+        return !lineExists(lineIndex + 1)
+                || lines.get(lineIndex + 1).equals("");
+    }
+    
+    private boolean lineExists(int lineIndex) {
+        return lineIndex < lines.size();
+    }
+    
+    private int getEffectiveColumnWidth(int columnIndex) {
+        if (columnIndex < columnCount - 1) {
+            return columnWidth + spaceBetweenColumns;
+        } else {
+            return columnWidth;
+        }
+    }
+    
+    private void splitContentIntoLines(String content) {
+        for (String paragraph : getParagraphs(content)) {
+            if (!lines.isEmpty()) {
                 lines.add("");
             }
             String actualLine = "";
@@ -37,82 +152,37 @@ public class App
             }
             lines.add(actualLine);
         }
-        
-        ListIterator<String> iterator = lines.listIterator();
-        while (iterator.hasNext()) {
-            
-            String line = iterator.next().trim();
-            //System.out.println(java.util.Arrays.toString(line.toCharArray()));
-            System.out.print(String.format("%3s :", line.length()));
-            int additionalSpace = columnWidth - line.length();
-            
-            if (!line.contains(" ") || additionalSpace == 0) {
-                System.out.println(line);
-                formatedLines.add(line);
-                continue;
-            }
-            if (!iterator.hasNext()) {
-                System.out.println(line);
-                formatedLines.add(line);
-                break;
-            }
-            if (iterator.next().equals("")) {
-                System.out.println(line);
-                formatedLines.add(line);
-                iterator.previous();
-                continue;
-            }
-            iterator.previous();
-            
-            String[] words = line.split(" ");
-            int spaceCount = words.length - 1;
-            int additionalSpaceWidth = additionalSpace / spaceCount;
-            int longerSpaceCount = additionalSpace % spaceCount;
-            
-            String newLine = "";
-            for (String word : words) {
-                newLine += word;
-                if (longerSpaceCount > 0) {
-                    newLine += String.format("%" + (1 + additionalSpaceWidth + 1) + "s", "");
-                } else if (spaceCount > 0) {
-                    newLine += String.format("%" + (1 + additionalSpaceWidth) + "s", "");
-                }
-                longerSpaceCount--;
-                spaceCount--;
-            }
-
-            System.out.println(newLine);
-            formatedLines.add(newLine);
-            
+    }
+    
+    private String[] getParagraphs(String data) {
+        return data.split("(\r\n){2}|\r{2}|\n{2}");
+    }
+    
+    private String[] getWords(String data) {
+        return data.split("[ \t\r\n]+");
+    }
+    
+    private String[] getSplittedWordIfTooLong(String word, int maxWidth) {
+        if (word.length() > maxWidth) {
+            return new String[] {
+                word.substring(0, maxWidth - 1) + "-",
+                word.substring(maxWidth - 1)
+            };
+        } else {
+            return new String[] { word };
         }
-        
-        int linesPerColumn = formatedLines.size() / columnCount + 1;
-        System.out.println(formatedLines.size());
-        
-        for (int i = 0; i < linesPerColumn; i++) {
-            
-            for (int j = 0; j < columnCount; j++) {
-                
-                int effectiveColumnWidth;
-                if (j < columnCount - 1) {
-                    effectiveColumnWidth = columnWidth + spaceBetweenColumns;
-                } else {
-                    effectiveColumnWidth = columnWidth;
-                }
-                
-                int lineIndex = i + j * linesPerColumn;
-                if (lineIndex < formatedLines.size()) {
-                    
-                    System.out.print(String.format("%-" + effectiveColumnWidth + "s", formatedLines.get(lineIndex)));
-                    
-                }
-                
-            }
-            
-            System.out.println();
-            
+    }
+    
+    private boolean fitsIntoLine(String line, String word, int maxWidth) {
+        return (line.length() == 0 || line.length() + 1 + word.length() <= maxWidth);
+    }
+    
+    private String appendToLine(String line, String word) {
+        if (line.length() != 0) {
+            line += " ";
         }
-        
+        line += word;
+        return line;
     }
     
     private static String readFileContent(String filename) throws Exception {
@@ -133,34 +203,13 @@ public class App
         return stringBuilder.toString().trim();
     }
     
-    private static String[] getParagraphs(String data) {
-        return data.split("(\r\n){2}|\r{2}|\n{2}");
-    }
-    
-    private static String[] getWords(String data) {
-        return data.split("[ \t\r\n]+");
-    }
-    
-    private static String[] getSplittedWordIfTooLong(String word, int maxWidth) {
-        if (word.length() > maxWidth) {
-            return new String[] {
-                word.substring(0, maxWidth - 1) + "-",
-                word.substring(maxWidth - 1)
-            };
-        } else {
-            return new String[] { word };
+    private static void writeContentToFile(String filename, String content) throws Exception {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(filename, false));
+        try {
+            writer.write(content);
+            writer.flush();
+        } finally {
+            writer.close();
         }
-    }
-    
-    private static boolean fitsIntoLine(String line, String word, int maxWidth) {
-        return (line.length() == 0 || line.length() + 1 + word.length() <= maxWidth);
-    }
-    
-    private static String appendToLine(String line, String word) {
-        if (line.length() != 0) {
-            line += " ";
-        }
-        line += word;
-        return line;
     }
 }
