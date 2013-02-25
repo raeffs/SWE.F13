@@ -50,7 +50,7 @@ public class App
     }
     
     private int getLinesPerColumn() {
-        return lines.size() / columnCount + 1;
+        return (int)Math.ceil((double)lines.size() / columnCount);
     }
     
     private String constructOutput(int linesPerColumn) {
@@ -135,23 +135,38 @@ public class App
     }
     
     private void splitContentIntoLines(String content) {
-        for (String paragraph : getParagraphs(content)) {
-            if (!lines.isEmpty()) {
-                lines.add("");
-            }
-            String actualLine = "";
-            for (String word : getWords(paragraph)) {
-                for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
-                    if (fitsIntoLine(actualLine, part, columnWidth)) {
-                        actualLine = appendToLine(actualLine, part);
-                    } else {
-                        lines.add(actualLine);
-                        actualLine = part;
+        int missingLines = 0;
+        do {
+            for (String paragraph : getParagraphs(content)) {
+                if (!lines.isEmpty()) {
+                    lines.add("");
+                }
+                String actualLine = "";
+                for (String word : getWords(paragraph)) {
+                    for (String part : getSplittedWordIfTooLong(word, columnWidth)) {
+                        if (missingLines > 0 &&
+                                fitsIntoLine(actualLine, part, columnWidth) &&
+                                !fitsIntoLine(actualLine, part, columnWidth - 1)) {
+                            missingLines--;
+                            lines.add(actualLine);
+                            actualLine = part;
+                        } else if (fitsIntoLine(actualLine, part, columnWidth)) {
+                            actualLine = appendToLine(actualLine, part);
+                        } else {
+                            lines.add(actualLine);
+                            actualLine = part;
+                        }
                     }
                 }
+                lines.add(actualLine);
             }
-            lines.add(actualLine);
-        }
+            missingLines = getMissingLinesToNearlyFillLastBlock();
+        } while (missingLines != 0);
+    }
+    
+    private int getMissingLinesToNearlyFillLastBlock() {
+        return (columnCount - lines.size() % columnCount) > 1 ?
+                columnCount - lines.size() % columnCount : 0;
     }
     
     private String[] getParagraphs(String data) {
